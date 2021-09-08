@@ -107,8 +107,8 @@ def cubic_structure(tp,raio,qnt,tp_arq,*args):
                     m_posx.append(x)
                     m_posy.append(y)
                     m_posz.append(z)
-                    m_phi.append(round(np.random.rand(),2)*2*np.pi)
-                    m_theta.append(round(np.random.rand(),2)*np.pi)
+                    m_phi.append(np.random.rand()*2*np.pi)
+                    m_theta.append(np.random.rand()*np.pi)
                 elif tp_arq != "txt" and tp_arq != "":
                     ax.plot_surface(X + x, Y + y, Z + z,color="blue")
         else:
