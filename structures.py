@@ -8,21 +8,27 @@ def cubic_structure(tp,raio,qnt,tp_arq,*args):
     pos_w_part = []
     path = os.path.dirname(os.path.realpath(__file__))
     arq1 = open(f"{path}/united_particles_{tp}.txt", "w")
+    aprox = 0.1
     if tp == "SC":
         step = 2*raio
-        qnt_aresta = np.ceil((qnt)**(1/3)) if not args else np.ceil(((qnt)**(1/3))*1/args[0]) 
+        qnt_aresta = (qnt)**(1/3) if not args else (qnt/args[0])**(1/3)
+        aprox = 0.09
+        # v = (qnt_aresta**3)*4*np.pi/((qnt_aresta+))
     elif tp == "FCC":
         step = raio*np.sqrt(2)
-        qnt_aresta = int(np.sqrt(2)*(qnt)**(1/3)) - 1 if not args else int((np.sqrt(2)*(qnt)**(1/3))*1/args[0]) - 1
-        # Fator de distribuição np.sqrt(2) vem da divisão (2*raio)/(raio*np.sqrt(2)); -1 pq com exceção do primeiro, a cada step tem 1 partícula
+        qnt_aresta = (2*qnt)**(1/3) if not args else int((2*qnt/args[0])**(1/3))
     elif tp == "BCC":
         step = 2*raio/np.sqrt(3)
-        qnt_aresta = int(np.sqrt(3)*(qnt)**(1/3)) - 1 if not args else int((np.sqrt(3)*(qnt)**(1/3))*(1/args[0])) - 1
-        # Fator de distribuição np.sqrt(3) vem da divisão (2*raio)/(2*raio/np.sqrt(3)); -1 pq com exceção do primeiro, a cada step tem 1 partícula
+        qnt_aresta = (4*qnt)**(1/3) if not args else int((4*qnt/args[0])**(1/3))
+    if not args:
+        if qnt_aresta - int(qnt_aresta) <= aprox:
+            qnt_aresta = int(qnt_aresta)
+        else:
+            qnt_aresta = np.ceil(qnt_aresta)
+    aresta = qnt_aresta*step
     if tp_arq == "txt":
         arq = open("{}/{}.txt".format(path,tp), "w")
     elif tp_arq != "txt" and tp_arq != "":
-        aresta = qnt_aresta*step
         tipo = tp_arq
         fig = plt.figure()
         ax = fig.add_subplot(111,projection='3d')
@@ -130,31 +136,34 @@ def cubic_structure(tp,raio,qnt,tp_arq,*args):
     elif tp_arq != "txt" and tp_arq != "":
         plt.savefig("{}/{}.{}".format(path,tp,tipo))
 
-    linha = 0
-    qnt_united = 0
-    for part in pos_w_part:
-        unt_part = [tuple(part)]
-        if tp == "SC":
-            for pos in range(3): # referente às 3 coordenadas
-                test_particle = [part[0],part[1],part[2]]
-                coord = part[pos] - step
-                for c in range(2):
-                    test_particle[pos] = coord + 2*c*step
-                    if test_particle in pos_w_part:
-                        unt_part.append(tuple(test_particle))
-        elif tp == "FCC":
-            for k in range(2): # acima e abaixo da partícula escolhida
-                test_particle = [part[0],part[1],part[2]]
-                z = 2
-        elif tp == "BCC":
-            k = 0
-        if len(unt_part) > 1:
-            if linha == 0:
-                arq1.write(str(unt_part)[1:-1])
-                linha += 1
-            else:
-                arq1.write("\n" + str(unt_part)[1:-1])
-            qnt_united += len(unt_part)
+    # linha = 0
+    # qnt_united = 0
+    # for part in pos_w_part:
+    #     unt_part = [tuple(part)]
+    #     if tp == "SC":
+    #         for pos in range(3): # referente às 3 coordenadas
+    #             test_particle = [part[0],part[1],part[2]]
+    #             coord = part[pos] - step
+    #             for c in range(2):
+    #                 test_particle[pos] = coord + 2*c*step
+    #                 if test_particle in pos_w_part:
+    #                     unt_part.append(tuple(test_particle))
+    #     elif tp == "FCC":
+    #         for k in range(3): # acima, abaixo e na mesma altura da partícula escolhida
+    #             test_particle = [part[0],part[1],part[2]]
+    #             z = part[2] + step*(k - 1)
+    #             for j in range(3):
+    #                 y = part[1] + step*(j - 1)
+
+    #     elif tp == "BCC":
+    #         k = 0
+    #     if len(unt_part) > 1:
+    #         if linha == 0:
+    #             arq1.write(str(unt_part)[1:-1])
+    #             linha += 1
+    #         else:
+    #             arq1.write("\n" + str(unt_part)[1:-1])
+    #         qnt_united += len(unt_part)
 
     # qnt_united = 0
     # for part1 in range(len(pos_w_part)):
@@ -167,6 +176,8 @@ def cubic_structure(tp,raio,qnt,tp_arq,*args):
     # end = time.time()
     # arq1.write(str(qnt_united))
     # arq1.close()
-    print(qnt_united)
-
-cubic_structure("BCC",1,4000,"png")
+    # print(qnt_united)
+    v_cubo = aresta**3
+    v_part = qnt*4*np.pi*raio**3/3
+    print(f"Concentração: {(v_part/v_cubo)*100:.2f}%")
+cubic_structure("BCC",1,2000,"png",0.5)
