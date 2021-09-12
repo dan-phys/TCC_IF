@@ -30,7 +30,6 @@ for part_num in range(len(values['x'])):
     # perc = part_num/qnt*100
     # print(f"Análise: [----- {perc:.2f}% -----]", end= "\r" if perc < 100 else "\n")
 
-# print(f"Minimização: [----- {100.00}% -----]")
 end = time.time()
 txt.close()
 print(end-start)
