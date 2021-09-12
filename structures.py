@@ -136,34 +136,42 @@ def cubic_structure(tp,raio,qnt,tp_arq,*args):
     elif tp_arq != "txt" and tp_arq != "":
         plt.savefig("{}/{}.{}".format(path,tp,tipo))
 
-    # linha = 0
-    # qnt_united = 0
-    # for part in pos_w_part:
-    #     unt_part = [tuple(part)]
-    #     if tp == "SC":
-    #         for pos in range(3): # referente às 3 coordenadas
-    #             test_particle = [part[0],part[1],part[2]]
-    #             coord = part[pos] - step
-    #             for c in range(2):
-    #                 test_particle[pos] = coord + 2*c*step
-    #                 if test_particle in pos_w_part:
-    #                     unt_part.append(tuple(test_particle))
-    #     elif tp == "FCC":
-    #         for k in range(3): # acima, abaixo e na mesma altura da partícula escolhida
-    #             test_particle = [part[0],part[1],part[2]]
-    #             z = part[2] + step*(k - 1)
-    #             for j in range(3):
-    #                 y = part[1] + step*(j - 1)
-
-    #     elif tp == "BCC":
-    #         k = 0
-    #     if len(unt_part) > 1:
-    #         if linha == 0:
-    #             arq1.write(str(unt_part)[1:-1])
-    #             linha += 1
-    #         else:
-    #             arq1.write("\n" + str(unt_part)[1:-1])
-    #         qnt_united += len(unt_part)
+    linha = 0
+    qnt_united = 0
+    for part in pos_w_part:
+        unt_part = [tuple(part)]
+        if tp == "SC":
+            for pos in range(3): # referente às 3 coordenadas
+                test_particle = [part[0],part[1],part[2]]
+                coord = part[pos] - step
+                for c in range(2):
+                    test_particle[pos] = coord + 2*c*step
+                    if test_particle in pos_w_part:
+                        unt_part.append(tuple(test_particle))
+        elif tp == "FCC":
+            for k in range(3): # acima, abaixo e na mesma altura da partícula escolhida
+                z = part[2] + step*(k - 1)
+                for j in range(3):
+                    y = part[1] + step*(j - 1)
+                    for i in range(3):
+                        x = part[0] + step(i - 1)
+                        test_particle = [x,y,z]
+                        if test_particle in pos_w_part:
+                            dist = np.sqrt((part[0] - test_particle[0])**2 + (part[1] - test_particle[1])**2 + (part[2] - test_particle[2])**2)
+                            if dist < 2.05:
+                                unt_part.append(tuple(test_particle))
+                                # Todas as partículas próximas formam uma única rede?
+                        else:
+                            continue
+        elif tp == "BCC":
+            k = 0
+        if len(unt_part) > 1:
+            if linha == 0:
+                arq1.write(str(unt_part)[1:-1])
+                linha += 1
+            else:
+                arq1.write("\n" + str(unt_part)[1:-1])
+            qnt_united += len(unt_part)
 
     # qnt_united = 0
     # for part1 in range(len(pos_w_part)):
