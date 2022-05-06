@@ -33,7 +33,10 @@ class MagneticSystem:
         elif modelType == "BCC":
             step = 2*radius/np.sqrt(3)
             qntEdge = round(np.cbrt(4*numOfParticles/concentration))
-        
+        else:
+            print("Insira um modelo válido (SC, FCC ou BCC).")
+            time.sleep(2)
+            exit()
         # the qntEdge must be an integer, so to avoid approximation errors we use round function
 
         edge = qntEdge*step
@@ -103,7 +106,6 @@ class MagneticSystem:
                                 continue
                         else:
                             continue
-
                 qntParticles += 1
                 self.posWithParticles.append(coordinates)
                 if qntParticles == 1:
@@ -115,8 +117,8 @@ class MagneticSystem:
                 if ImgFile:
                     ax.plot_surface(X + x, Y + y, Z + z,color="blue")
 
-            perc = qntParticles/numOfParticles*100
-            print(f"Calculando as posições: [----- {perc:.0f}% -----]", end= "\r" if perc < 100 else "\n")
+            progress = qntParticles/numOfParticles*100
+            print(f"Calculando as posições: [----- {progress:.0f}% -----]", end= "\r" if progress < 100 else "\n")
         file.close()
 
         particlesVolume = qntParticles*4*np.pi*radius**3/3
