@@ -2,14 +2,17 @@ import numpy as np
 import sympy as sp
 import matplotlib.pyplot as plt
 import os, time
-from threading import Thread
+from multiprocessing import Pool
+
+def minimization(test):
+    test.minimization()
 
 class MagneticSystem:
 
     def __init__(self, numOfParticles, modelType, concentration,ImgFile):
 
         # all particles have the same radius
-        radius = 1
+        self.radius = 1
 
         # save the data of the system
         self.model = modelType
@@ -40,13 +43,13 @@ class MagneticSystem:
         # calculate the step and the quantity of particler per edge
         # according to the modelType
         if modelType == "SC":
-            step = 2*radius
+            step = 2*self.radius
             qntEdge = round(np.cbrt(numOfParticles/concentration))
         elif modelType == "FCC":
-            step = radius*np.sqrt(2)
+            step = self.radius*np.sqrt(2)
             qntEdge = round(np.cbrt(2*numOfParticles/concentration))
         elif modelType == "BCC":
-            step = 2*radius/np.sqrt(3)
+            step = 2*self.radius/np.sqrt(3)
             qntEdge = round(np.cbrt(4*numOfParticles/concentration))
         else:
             print("Insira um modelo válido (SC, FCC ou BCC).")
@@ -68,7 +71,7 @@ class MagneticSystem:
             fig = plt.figure()
             ax = fig.add_subplot(111,projection="3d")
             u,v = np.mgrid[0:2*np.pi:20j, 0:np.pi:20j]
-            X, Y, Z = radius*np.sin(v)*np.cos(u), radius*np.sin(v)*np.sin(u), radius*np.cos(v)
+            X, Y, Z = self.radius*np.sin(v)*np.cos(u), self.radius*np.sin(v)*np.sin(u), self.radius*np.cos(v)
 
         # generate the particles positions randomly, according to the model
         qntParticles = 0
@@ -138,7 +141,7 @@ class MagneticSystem:
             print(f"Calculando as posições: [----- {progress:.0f}% -----]", end= "\r" if progress < 100 else "\n")
         file.close()
 
-        particlesVolume = qntParticles*4*np.pi*radius**3/3
+        particlesVolume = qntParticles*4*np.pi*self.radius**3/3
         boxVolume = edge**3
         print(f"Concentração da amostra: {particlesVolume/boxVolume*100:.2f} %")
 
@@ -158,6 +161,9 @@ class MagneticSystem:
 
         self.magnetizationMatrix = []
 
+        indexOfParticles = []
+
+        # add the values to the dict posValues
         for part in range(self.num):
             phi = np.random.rand()*2*np.pi
             theta = np.random.rand()*np.pi
@@ -168,34 +174,59 @@ class MagneticSystem:
             self.posValues["Phi"].append(Phi)
             self.posValues["Theta"].append(Theta)
 
-        def firstThreadUseInMinimization(initialRange,finalRange):
-            for part in range(initialRange,finalRange):
+        # add the values to the list, completing the loop to the hysteresis curve
+        for i in range(1,5*numberOfSteps+1):
+            step = -magneticFieldStep if 3*numberOfSteps + 1 > i >= numberOfSteps + 1 else magneticFieldStep
+            self.magneticField.append(self.magneticField[-1] + step)
+
+        # separate the indexes for the Pool
+        initialRange = 0
+        for i in range(1,10):
+            finalRange = int(self.num/9 * i)
+            tempList = [k for k in range(initialRange,finalRange)]
+            initialRange = finalRange
+            indexOfParticles.append(tempList)
+
+        indexOfParticles = tuple(indexOfParticles)
+
+        def firstThreadUseInMinimization(indexes):
+            for part in range(indexes[0],indexes[-1]+1):
                 particle = [self.posValues["x"][part], self.posValues["y"][part], self.posValues["z"][part]]
                 theta = self.posValues["theta"][part]
                 phi = self.posValues["phi"][part]
                 hi_x = 0.00
                 hi_y = 0.00
                 hi_z = 0.00
-                for k in range(3): # acima, abaixo e na mesma altura da partícula escolhida
-                    z = particle[2] + step*(k - 1)
-                    for j in range(3):
-                        y = particle[1] + step*(j - 1)
-                        for i in range(3):
-                            x = particle[0] + step*(i - 1)
-                            test_particle = [x,y,z]
-                            if particle != test_particle and test_particle in self.posWithParticles:
-                                dist = np.sqrt((particle[0] - x)**2 + (particle[1] - y)**2 + (particle[2] - z)**2)
-                                if dist < 2.1*self.radius:
-                                    hi_x += intExchange*np.sin(theta)*np.cos(phi)
-                                    hi_y += intExchange*np.sin(theta)*np.sin(phi)
-                                    hi_z += intExchange*np.cos(theta)
-                self.posValues["hi_x"][part] = hi_x
-                self.posValues["hi_y"][part] = hi_y
-                self.posValues["hi_z"][part] = hi_z
+                for part2 in range(self.num):
+                    x_2 = self.posValues["x"][part2]
+                    y_2 = self.posValues["y"][part2]
+                    z_2 = self.posValues['z'][part2]
+                    theta_2 = self.posValues["theta"][part2]
+                    phi_2 = self.posValues["phi"][part2]
+                    dist_x = particle[0] - x_2
+                    dist_y = particle[1] - y_2
+                    dist_z = particle[2] - z_2
+                    dist = np.sqrt(dist_x**2 + dist_y**2 + dist_z**2)
+                    mu_x = np.sin(theta_2)*np.cos(phi_2)*dist_x
+                    mu_y = np.sin(theta_2)*np.sin(phi_2)*dist_y
+                    mu_z = np.cos(theta_2)*dist_z
+                    mu = mu_x + mu_y + mu_z
+                    dp = 10**(-3)
+                    if part2 != part:
+                        hi_x += dp*(3*mu*dist_x/dist**5 - np.sin(theta_2)*np.cos(phi_2)/dist**3)
+                        hi_y += dp*(3*mu*dist_y/dist**5 - np.sin(theta_2)*np.sin(phi_2)/dist**3)
+                        hi_z += dp*(3*mu*dist_z/dist**5 - np.cos(theta_2)/dist**3)
+                    if dist < 2.1*self.radius:
+                        hi_x += self.intExchange*np.sin(theta)*np.cos(phi)
+                        hi_y += self.intExchange*np.sin(theta)*np.sin(phi)
+                        hi_z += self.intExchange*np.cos(theta)
+                return hi_x,hi_y,hi_z,part
+                # self.posValues["hi_x"][part] = hi_x
+                # self.posValues["hi_y"][part] = hi_y
+                # self.posValues["hi_z"][part] = hi_z
 
-        def secondThreadUseInMinimization(initialRange,finalRange):
-            n = 0
-            for part in range(initialRange,finalRange):
+        def secondThreadUseInMinimization(indexes):
+            for part in range(indexes[0],indexes[-1]+1):
                 tu = self.posValues["Theta"][part]
                 fu = self.posValues["Theta"][part]
                 theta = self.posValues["theta"][part]
@@ -227,40 +258,45 @@ class MagneticSystem:
                     dgt = dzt + dut
                     dgf = dzf + duf
                     dg = np.sqrt((dgt)**2+(dgf)**2)
-                self.posValues["theta"][part] = theta
-                self.posValues["phi"][part] = phi
-                n += 1
-            perc = n/(len(self.magneticField)*self.num)*100
-            print(f"Calculando a contribuição energética das partículas: [----- {perc:.0f}% -----]", end= "\r" if perc < 100 else "\n")
-
-        # add the values to the list, completing the loop to the hysteresis curve
-        for i in range(1,5*numberOfSteps+1):
-            step = -magneticFieldStep if 3*numberOfSteps + 1 > i >= numberOfSteps + 1 else magneticFieldStep
-            self.magneticField.append(self.magneticField[-1] + step)
+                # self.posValues["theta"][part] = theta
+                # self.posValues["phi"][part] = phi
+                return theta,phi,part
+                # numberOfInteractions[0] += 1
+                # perc = numberOfInteractions[0]/(len(self.magneticField)*self.num)*100
+                # print(f"Calculando a contribuição energética das partículas: [----- {perc:.0f}% -----]", end= "\r" if perc < 100 else "\n")
+                
 
 
         for h in self.magneticField:
-            initialRange = 0
-            for thread in range(1,10):
-                finalRange = int(self.num/9 * thread)
-                task = Thread(target=firstThreadUseInMinimization,args=(initialRange,finalRange))
-                task.start()
-                initialRange = finalRange
+            
+            if __name__ == "__main__":
+                # using multiprocessing to work on 10 processes for the firstThreadUseInMinimization
+                tasks = Pool(10)
+                resultsFirst = tasks.map(firstThreadUseInMinimization,indexOfParticles)
+                tasks.close()
+                tasks.join()
 
-            initialRange = 0
-            for thread in range(1,10):
-                finalRange = int(self.num/9 * thread)
-                task = Thread(target=secondThreadUseInMinimization,args=(initialRange,finalRange))
-                task.start()
-                initialRange = finalRange
+                self.posValues["hi_x"][resultsFirst[3]] = resultsFirst[0]
+                self.posValues["hi_y"][resultsFirst[3]] = resultsFirst[1]
+                self.posValues["hi_z"][resultsFirst[3]] = resultsFirst[2]
+                
+                # using multiprocessing to work on 10 processes for the secondThreadUseInMinimization
 
-            s1 = 0.0
-            s2 = 0.0
-            for part in range(self.num):
-                s1 += np.cos(self.posValues["theta"][part])*np.sin(self.posValues["Theta"][part])
-                s2 += np.sin(self.posValues["Theta"][part])
-            mag = s1/s2
-            self.magnetizationMatrix.append(mag)
+                tasks = Pool(10)
+                resultsSecond = tasks.map(secondThreadUseInMinimization,indexOfParticles)
+                tasks.close()
+                tasks.join()
+
+                self.posValues["theta"][resultsSecond[2]] = resultsSecond[0]
+                self.posValues["phi"][resultsSecond[2]] = resultsSecond[1]
+
+                s1 = 0.0
+                s2 = 0.0
+                for part in range(self.num):
+                    s1 += np.cos(self.posValues["theta"][part])*np.sin(self.posValues["Theta"][part])
+                    s2 += np.sin(self.posValues["Theta"][part])
+                mag = s1/s2
+                self.magnetizationMatrix.append(mag)
 
         
 
@@ -288,6 +324,6 @@ class MagneticSystem:
             fig.savefig(f"{self.path}/{self.model}/hys_{self.num}_{self.maxExternalMagField}_{self.intExchange:.1f}.{ImgFile}",bbox_inches="tight")
 
 
-system = MagneticSystem(15**3,"SC",1,False)
+system = MagneticSystem(1000,"SC",1,False)
 system.minimization(3,0.4)
 system.saveHysteresisCurve("png")
