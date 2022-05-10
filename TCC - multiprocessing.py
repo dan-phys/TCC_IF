@@ -269,29 +269,40 @@ if minimization:
                 # print(f"Calculando a contribuição energética das partículas: [----- {perc:.0f}% -----]", end= "\r" if perc < 100 else "\n")
                 
 
-
+        n = 0
         for h in magneticField:
             
-            # using multiprocessing to work on 10 processes for the firstThreadUseInMinimization
+            # using multiprocessing to work on 9 processes for the firstThreadUseInMinimization
             tasks = Pool(9)
             resultsFirst = tasks.map(firstThreadUseInMinimization,indexOfParticles)
             tasks.close()
             tasks.join()
-            print(resultsFirst,len(resultsFirst))
-            input()
-            posValues["hi_x"][resultsFirst[3]] = resultsFirst[0]
-            posValues["hi_y"][resultsFirst[3]] = resultsFirst[1]
-            posValues["hi_z"][resultsFirst[3]] = resultsFirst[2]
+            # print(resultsFirst,len(resultsFirst))
+            # input()
             
-            # using multiprocessing to work on 10 processes for the secondThreadUseInMinimization
+            # updating the data
+            results = []
+            for i in resultsFirst:
+                results.extend(i)
+            for i in results:
+                posValues["hi_x"][i[3]] = i[0]
+                posValues["hi_y"][i[3]] = i[1]
+                posValues["hi_z"][i[3]] = i[2]
+            
+            # using multiprocessing to work on 9 processes for the secondThreadUseInMinimization
 
             tasks = Pool(9)
             resultsSecond = tasks.map(secondThreadUseInMinimization,indexOfParticles)
             tasks.close()
             tasks.join()
 
-            posValues["theta"][resultsSecond[2]] = resultsSecond[0]
-            posValues["phi"][resultsSecond[2]] = resultsSecond[1]
+            # updating the data
+            results = []
+            for i in resultsSecond:
+                results.extend(i)
+            for i in results:
+                posValues["theta"][i[2]] = i[0]
+                posValues["phi"][i[2]] = i[1]
 
             s1 = 0.0
             s2 = 0.0
@@ -300,7 +311,8 @@ if minimization:
                 s2 += np.sin(posValues["Theta"][part])
             mag = s1/s2
             magnetizationMatrix.append(mag)
-
+            n += 1
+            print(f"Valores atualizados para o campo magnético {h}. Progresso: {n/len(magneticField)*100 :.2f}")
 
         # create the txt file for the hysteresis points
         hysTxt = open(f"{path}/{modelType}/hys_{numOfParticles}_{maxExternalMagField}_{intExchange}.txt", "w")
