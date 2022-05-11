@@ -11,13 +11,13 @@ radius = 1
 # save the data of the system
 modelType = "SC"
 numOfParticles = 15**3
-concentration = 1
+concentration = 0.8
 modelImgFile = False
 minimization = True
 if minimization:
     maxExternalMagField = 3
     intExchange = 0.4
-    hysImgFile = True
+    hysImgFile = "pdf"
 
 # catch the path to save the image/txt output
 path = os.path.dirname(os.path.realpath(__file__))
@@ -151,7 +151,7 @@ if modelImgFile:
 
 if minimization:
     if __name__ == "__main__":
-        magneticFieldStep = 0.05
+        magneticFieldStep = 0.1
         numberOfSteps = int(maxExternalMagField/magneticFieldStep)
         magneticField = [0]
         minimizationRate = 0.1
@@ -247,7 +247,7 @@ if minimization:
                 dgt = dzt + dut
                 dgf = dzf + duf
                 dg = np.sqrt((dgt)**2+(dgf)**2)
-                while dg > 0.0001:
+                while dg > 0.001:
                     theta = theta - minimizationRate*dgt
                     phi = phi - minimizationRate*dgf
                     p3 =  np.cos(theta-tu)-2*np.sin(theta)*np.sin(tu)*np.sin((phi-fu)/2)**2
@@ -268,10 +268,11 @@ if minimization:
                 # perc = numberOfInteractions[0]/(len(magneticField)*num)*100
                 # print(f"Calculando a contribuição energética das partículas: [----- {perc:.0f}% -----]", end= "\r" if perc < 100 else "\n")
                 
-
+        
+        totalTime = 0
         n = 0
         for h in magneticField:
-            
+            start = time.time()
             # using multiprocessing to work on 9 processes for the firstThreadUseInMinimization
             tasks = Pool(9)
             resultsFirst = tasks.map(firstThreadUseInMinimization,indexOfParticles)
@@ -312,7 +313,10 @@ if minimization:
             mag = s1/s2
             magnetizationMatrix.append(mag)
             n += 1
-            print(f"Valores atualizados para o campo magnético {h}. Progresso: {n/len(magneticField)*100 :.2f}")
+            perc = n/len(magneticField)*100
+            final =  time.time()
+            totalTime += final - start
+            print(f"Progresso: {perc :.2f} %. Tempo gasto para essa interação: {final - start :.1f}s. Tempo total de execução: {totalTime :.1f}s", end= "\r" if perc < 100 else "\n")
 
         # create the txt file for the hysteresis points
         hysTxt = open(f"{path}/{modelType}/hys_{numOfParticles}_{maxExternalMagField}_{intExchange}.txt", "w")
@@ -326,7 +330,7 @@ if minimization:
         # if ImgFile is not False, create the image
         if hysImgFile:
             fig, ax = plt.subplots(figsize=(10,10))
-            ax.grid(which="both",color="grey", linewidth=1, linestryle="-", alpha=0.6)
+            ax.grid(which="both",color="grey", linewidth=1, linestyle="-", alpha=0.6)
             ax.set_ylim((-1,1))
             ax.set_xlim((-maxExternalMagField, maxExternalMagField))
             ax.set_xlabel("h", size=14)
