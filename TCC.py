@@ -255,7 +255,7 @@ class MagneticSystem:
             anglesValues = []
             for part in range(indexes[0],indexes[1]):
                 tu = posValues["Theta"][part]
-                fu = posValues["Theta"][part]
+                fu = posValues["Phi"][part]
                 theta = posValues["theta"][part]
                 phi = posValues["phi"][part]
                 hi_x = posValues["hi_x"][part]
