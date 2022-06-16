@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import os, time
 from multiprocessing import Pool
 
+# Co e Fe
+# Análise da remanência e coercividade 
+# Análise da magnetização inicial: derivada é a suscetibilidade inicial
+# Produto BH ****
 
 class MagneticSystem:
 
@@ -139,7 +143,7 @@ class MagneticSystem:
 
     @staticmethod
     def hysteresis(savedPositions,cutoff,maxExternalMagField,intExchange,ImgFile):
-        global dipoleAndExchangeContributions,minimization
+        global dipoleAndExchangeContributions,minimization,closestParticles
         path = os.path.dirname(os.path.realpath(__file__))
         fileName = savedPositions.split("/")
         model = fileName[0]
@@ -148,9 +152,9 @@ class MagneticSystem:
         posValues = {
                 "x":     [],
                 "y":     [],
-                "z":     [], 
-                "phi":   [], 
-                "theta": [], 
+                "z":     [],
+                "phi":   [],
+                "theta": [],
                 "Phi":   [], # the phi of the easy magnetization axis
                 "Theta": [], # the theta of the easy magnetization axis
                 "hi_x":  [],
@@ -172,7 +176,7 @@ class MagneticSystem:
                 posValues["hi_y"].append(0)
                 posValues["hi_z"].append(0)
 
-        magneticFieldStep = 0.05
+        magneticFieldStep = 0.05/2
         numberOfSteps = int(maxExternalMagField/magneticFieldStep)
         magneticField = [0]
         minimizationRate = 0.1
@@ -218,6 +222,7 @@ class MagneticSystem:
         indexOfParticles = tuple(indexOfParticles)
 
         def dipoleAndExchangeContributions(indexes):
+            global closestParticles
             hiValues = []
             for part in range(indexes[0],indexes[1]):
                 particle = [posValues["x"][part], posValues["y"][part], posValues["z"][part]]
@@ -255,7 +260,7 @@ class MagneticSystem:
             anglesValues = []
             for part in range(indexes[0],indexes[1]):
                 tu = posValues["Theta"][part]
-                fu = posValues["Theta"][part]
+                fu = posValues["Phi"][part]
                 theta = posValues["theta"][part]
                 phi = posValues["phi"][part]
                 hi_x = posValues["hi_x"][part]
@@ -343,26 +348,31 @@ class MagneticSystem:
 
     
         # create the txt file for the hysteresis points
-        hysTxt = open(f"{path}/{model}/{numOfParticles}/{concentration}/hysteresis_{intExchange:.1f}.txt", "w")
+        hysTxt = open(f"{path}/{model}/{numOfParticles}/{concentration}/hysteresis_{intExchange:.2f}_{int(cutoff)}.txt", "w")
         for el in range(len(magneticField)):
             if el == 0:
                 hysTxt.write(f"{magneticField[el]} {magnetizationMatrix[el]}")
             else:
                 hysTxt.write(f"\n{magneticField[el]} {magnetizationMatrix[el]}")
+            if el == 240:
+                print(f"Remanência: {magnetizationMatrix[el]}")
         hysTxt.close()
 
         # if ImgFile is not False, create the image
         if ImgFile:
             fig, ax = plt.subplots(figsize=(10,10))
-            ax.grid(which="both",color="grey", linewidth=1, linestryle="-", alpha=0.6)
+            ax.grid(which="both",color="grey", linewidth=1, linestyle="-", alpha=0.6)
             ax.set_ylim((-1,1))
             ax.set_xlim((-maxExternalMagField, maxExternalMagField))
             ax.set_xlabel("h", size=14)
             ax.set_ylabel("m", size=14)
             ax.set_title(f"Curva de histerese: {model} {numOfParticles} part {concentration} conc {intExchange} exc")
             plt.plot(magneticField,magnetizationMatrix,color="red",linewidth="1")
-            fig.savefig(f"{path}/{model}/{numOfParticles}/{concentration}/hysteresis_{intExchange:.1f}.{ImgFile}",bbox_inches="tight")
+            fig.savefig(f"{path}/{model}/{numOfParticles}/{concentration}/hysteresis_{intExchange:.2f}_{int(cutoff)}.{ImgFile}",bbox_inches="tight")
 
-
-system = MagneticSystem()
-system.hysteresis(f"SC/{8**3}/1/system.txt",10.1,3,0.4,True)
+# concentrações 0.01, 0.2, 0.4, 0.6, 0.8 e 1
+numOfParticles = 16**3
+concentration = 0.01
+system = MagneticSystem(False,numOfParticles,"SC",concentration,"png")
+for i in range(0,9):
+    system.hysteresis(f"SC/{numOfParticles}/{concentration}/system.txt",16.1,3,i*0.25,"pdf")
