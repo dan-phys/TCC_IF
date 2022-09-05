@@ -1,0 +1,15 @@
+bfgs
+stepest_descend
+SC
+1200
+points45
+points90
+sla.png
+bfgs.txt
+data.txt
+minimization.mp4
+spinExamp-coerc.txt
+spinExamp-reman.txt
+spinExamp-sat.txt
+spinExamp-satInv.txt
+stepest_descend.txt
